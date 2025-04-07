@@ -1,12 +1,10 @@
 package com.example.spring_user_banking.model;
 
 import lombok.*;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -21,9 +19,9 @@ public class User {
     private Long id;
     private String name;
     private LocalDate dateOfBirth;
+    private String passwordHash;
+
     private List<String> emails = new ArrayList<>();
     private List<String> phones = new ArrayList<>();
     private BigDecimal balance;
-    private String passwordHash;
-
 }
