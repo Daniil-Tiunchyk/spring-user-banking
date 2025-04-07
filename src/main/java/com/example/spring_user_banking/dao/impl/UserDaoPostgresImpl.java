@@ -3,6 +3,7 @@ package com.example.spring_user_banking.dao.impl;
 import com.example.spring_user_banking.dao.UserDao;
 import com.example.spring_user_banking.exception.DuplicateDataException;
 import com.example.spring_user_banking.model.User;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -11,30 +12,39 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static com.example.spring_user_banking.config.database.DatabaseConstants.*;
+
 @Repository
+@RequiredArgsConstructor
 public class UserDaoPostgresImpl implements UserDao {
 
     private static final Logger logger = LoggerFactory.getLogger(UserDaoPostgresImpl.class);
-    private final JdbcTemplate jdbcTemplate;
 
-    public UserDaoPostgresImpl(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
+    private static final String UPDATE_USER_SQL =
+            "UPDATE users SET " +
+                    NAME_COLUMN + " = ?, " +
+                    DATE_OF_BIRTH_COLUMN + " = ?, " +
+                    PASSWORD_HASH_COLUMN + " = ? " +
+                    "WHERE " + ID_COLUMN + " = ?";
+
+    private final JdbcTemplate jdbcTemplate;
 
     private final RowMapper<User> userRowMapper = (rs, rowNum) -> {
         User user = new User();
-        user.setId(rs.getLong("id")); //fixme константы!
-        user.setName(rs.getString("name"));
-        user.setDateOfBirth(rs.getObject("date_of_birth", LocalDate.class));
-        user.setPassword(rs.getString("password"));
+        user.setId(rs.getLong(ID_COLUMN));
+        user.setName(rs.getString(NAME_COLUMN));
+        user.setDateOfBirth(rs.getObject(DATE_OF_BIRTH_COLUMN, LocalDate.class));
+        user.setPasswordHash(rs.getString(PASSWORD_HASH_COLUMN)); // Прямой доступ через сеттер
         return user;
     };
 
@@ -57,7 +67,7 @@ public class UserDaoPostgresImpl implements UserDao {
     }
 
     @Override
-    public List<User> findAll() {
+    public List<User> findAll() { //todo pagination
         String sql = "SELECT id, name, date_of_birth, password FROM users";
         try {
             List<User> users = jdbcTemplate.query(sql, userRowMapper);
@@ -70,16 +80,16 @@ public class UserDaoPostgresImpl implements UserDao {
     }
 
     @Override
+    @Transactional
     public boolean update(User user) {
-        String sql = "UPDATE users SET name = ?, date_of_birth = ?, password = ? WHERE id = ?";
         try {
-            int updated = jdbcTemplate.update(sql,
+            int updated = jdbcTemplate.update(UPDATE_USER_SQL,
                     user.getName(),
                     user.getDateOfBirth(),
-                    user.getPassword(),
+                    user.getPasswordHash(),
                     user.getId());
 
-            if (updated != 1) { //fixme не нравятся эти переменные в коде, позже вынести в константы
+            if (updated != AFFECTED_ROWS_ONE) {
                 logger.warn("No user found to update with ID: {}", user.getId());
                 return false;
             }
@@ -95,7 +105,7 @@ public class UserDaoPostgresImpl implements UserDao {
         String sql = "INSERT INTO email_data (user_id, email) VALUES (?, ?)";
         try {
             int inserted = jdbcTemplate.update(sql, userId, email);
-            if (inserted != 1) {
+            if (inserted != AFFECTED_ROWS_ONE) {
                 logger.warn("Failed to insert email for user ID: {}", userId);
                 return false;
             }
@@ -114,7 +124,7 @@ public class UserDaoPostgresImpl implements UserDao {
         String sql = "DELETE FROM email_data WHERE user_id = ? AND email = ?";
         try {
             int deleted = jdbcTemplate.update(sql, userId, email);
-            if (deleted != 1) {
+            if (deleted != AFFECTED_ROWS_ONE) {
                 logger.warn("No email found to delete: {} for user ID: {}", email, userId);
                 return false;
             }
@@ -130,7 +140,7 @@ public class UserDaoPostgresImpl implements UserDao {
         String sql = "INSERT INTO phone_data (user_id, phone) VALUES (?, ?)";
         try {
             int inserted = jdbcTemplate.update(sql, userId, phone);
-            if (inserted != 1) {
+            if (inserted != AFFECTED_ROWS_ONE) {
                 logger.warn("Failed to insert phone for user ID: {}", userId);
                 return false;
             }
@@ -149,7 +159,7 @@ public class UserDaoPostgresImpl implements UserDao {
         String sql = "DELETE FROM phone_data WHERE user_id = ? AND phone = ?";
         try {
             int deleted = jdbcTemplate.update(sql, userId, phone);
-            if (deleted != 1) {
+            if (deleted != AFFECTED_ROWS_ONE) {
                 logger.warn("No phone found to delete: {} for user ID: {}", phone, userId);
                 return false;
             }
@@ -161,7 +171,7 @@ public class UserDaoPostgresImpl implements UserDao {
     }
 
     @Override
-    public List<User> findByNameStartingWith(String namePrefix) {
+    public List<User> findByNameStartingWith(String namePrefix) { //todo pagination
         String sql = "SELECT id, name, date_of_birth, password FROM users WHERE name LIKE ?";
         String likePattern = namePrefix + "%";
         try {
@@ -175,7 +185,7 @@ public class UserDaoPostgresImpl implements UserDao {
     }
 
     @Override
-    public List<User> findByBirthDateAfter(LocalDate date) {
+    public List<User> findByBirthDateAfter(LocalDate date) { //todo pagination
         String sql = "SELECT id, name, date_of_birth, password FROM users WHERE date_of_birth > ?";
         try {
             List<User> users = jdbcTemplate.query(sql, userRowMapper, date);
@@ -227,23 +237,26 @@ public class UserDaoPostgresImpl implements UserDao {
         }
     }
 
-
     private void loadUserDetailsWithSeparateQueries(User user) {
         Long userId = user.getId();
         try {
-            String emailSql = "SELECT email FROM email_data WHERE user_id = ?";
+
+            String emailSql = String.format("SELECT %s FROM %s WHERE %s = ?",
+                    EMAIL_COLUMN, EMAIL_DATA_TABLE, USER_ID_COLUMN);
             List<String> emails = jdbcTemplate.query(emailSql,
-                    (rs, rowNum) -> rs.getString("email"), userId);
+                    (rs, rowNum) -> rs.getString(EMAIL_COLUMN), userId);
             user.setEmails(emails);
 
-            String phoneSql = "SELECT phone FROM phone_data WHERE user_id = ?";
+            String phoneSql = String.format("SELECT %s FROM %s WHERE %s = ?",
+                    PHONE_COLUMN, PHONE_DATA_TABLE, USER_ID_COLUMN);
             List<String> phones = jdbcTemplate.query(phoneSql,
-                    (rs, rowNum) -> rs.getString("phone"), userId);
+                    (rs, rowNum) -> rs.getString(PHONE_COLUMN), userId);
             user.setPhones(phones);
 
-            String balanceSql = "SELECT balance FROM account WHERE user_id = ?";
+            String balanceSql = String.format("SELECT %s FROM %s WHERE %s = ?",
+                    BALANCE_COLUMN, ACCOUNT_TABLE, USER_ID_COLUMN);
             BigDecimal balance = jdbcTemplate.queryForObject(balanceSql,
-                    (rs, rowNum) -> rs.getBigDecimal("balance"), userId);
+                    (rs, rowNum) -> rs.getBigDecimal(BALANCE_COLUMN), userId);
             user.setBalance(balance);
 
         } catch (DataAccessException e) {
@@ -252,25 +265,32 @@ public class UserDaoPostgresImpl implements UserDao {
         }
     }
 
-
     private void loadUsersDetailsWithJoin(User user) {
-        String sql = "SELECT " +
-                "  (SELECT ARRAY_AGG(email) FROM email_data WHERE user_id = u.id) AS emails, " +
-                "  (SELECT ARRAY_AGG(phone) FROM phone_data WHERE user_id = u.id) AS phones, " +
-                "  a.balance " +
-                "FROM users u " +
-                "LEFT JOIN account a ON u.id = a.user_id " +
-                "WHERE u.id = ?";
+        String sql = String.format( //todo refactro
+                "SELECT " +
+                        "  (SELECT ARRAY_AGG(%s) FROM %s WHERE %s = u.%s) AS %s, " +
+                        "  (SELECT ARRAY_AGG(%s) FROM %s WHERE %s = u.%s) AS %s, " +
+                        "  a.%s " +
+                        "FROM %s u " +
+                        "LEFT JOIN %s a ON u.%s = a.%s " +
+                        "WHERE u.%s = ?",
+                EMAIL_COLUMN, EMAIL_DATA_TABLE, USER_ID_COLUMN, ID_COLUMN, EMAILS_ALIAS,
+                PHONE_COLUMN, PHONE_DATA_TABLE, USER_ID_COLUMN, ID_COLUMN, PHONES_ALIAS,
+                BALANCE_COLUMN,
+                USERS_TABLE,
+                ACCOUNT_TABLE, ID_COLUMN, USER_ID_COLUMN,
+                ID_COLUMN);
 
         jdbcTemplate.query(sql, rs -> {
-            Array emailArray = rs.getArray("emails"); //fixme константы!
-            user.setEmails(emailArray != null ? Arrays.asList((String[])emailArray.getArray()) : List.of());
+            Array emailArray = rs.getArray(EMAILS_ALIAS);
+            user.setEmails(emailArray != null ?
+                    Arrays.asList((String[])emailArray.getArray()) : Collections.emptyList());
 
-            Array phoneArray = rs.getArray("phones");
-            user.setPhones(phoneArray != null ? Arrays.asList((String[])phoneArray.getArray()) : List.of());
+            Array phoneArray = rs.getArray(PHONES_ALIAS);
+            user.setPhones(phoneArray != null ?
+                    Arrays.asList((String[])phoneArray.getArray()) : Collections.emptyList());
 
-            user.setBalance(rs.getBigDecimal("balance"));
+            user.setBalance(rs.getBigDecimal(BALANCE_COLUMN));
         }, user.getId());
     }
-
 }
