@@ -2,6 +2,7 @@ package com.example.spring_user_banking.dao.impl;
 
 import com.example.spring_user_banking.dao.UserDao;
 import com.example.spring_user_banking.exception.DuplicateDataException;
+
 import com.example.spring_user_banking.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
@@ -235,6 +236,33 @@ public class UserDaoPostgresImpl implements UserDao {
         } catch (DataAccessException e) {
             logger.error("Failed to find user by phone: {}", phone, e);
             throw new DataAccessException("Error retrieving user by phone: " + phone, e) {};
+        }
+    }
+
+    private static final String FIND_BY_EMAIL_OR_PHONE_SQL =
+            "SELECT u.* FROM users u " +
+                    "LEFT JOIN email_data e ON u.id = e.user_id " +
+                    "LEFT JOIN phone_data p ON u.id = p.user_id " +
+                    "WHERE e.email = ? OR p.phone = ?";
+
+    @Override
+    public Optional<User> findByEmailOrPhone(String login) {
+        try {
+            User user = jdbcTemplate.queryForObject(
+                    FIND_BY_EMAIL_OR_PHONE_SQL,
+                    (rs, rowNum) -> {
+                        User u = new User();
+                        u.setId(rs.getLong("id"));
+                        u.setName(rs.getString("name"));
+                        u.setDateOfBirth(rs.getDate("date_of_birth").toLocalDate());
+                        // password_hash и другие поля по необходимости
+                        return u;
+                    },
+                    login, login // передаем login два раза для email и phone
+            );
+            return Optional.ofNullable(user);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
         }
     }
 
