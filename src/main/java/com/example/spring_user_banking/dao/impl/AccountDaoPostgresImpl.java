@@ -4,55 +4,61 @@ import com.example.spring_user_banking.dao.AccountDao;
 import com.example.spring_user_banking.exception.CustomException;
 import com.example.spring_user_banking.model.Account;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
+import static com.example.spring_user_banking.config.database.DatabaseConstants.*;
+
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class AccountDaoPostgresImpl implements AccountDao {
 
-    private static final Logger logger = LoggerFactory.getLogger(AccountDaoPostgresImpl.class);
-
     private final JdbcTemplate jdbcTemplate;
 
-    private final RowMapper<Account> accountRowMapper = (rs, rowNum) -> {
-        Account a = new Account();
-        a.setId(rs.getLong("id"));
-        a.setUserId(rs.getLong("user_id"));
-        a.setBalance(rs.getBigDecimal("balance"));
-        return a;
-    };
+    private static final RowMapper<Account> ACCOUNT_ROW_MAPPER = (rs, rowNum) ->
+            Account.builder()
+                    .id(rs.getLong(ID_COLUMN))
+                    .userId(rs.getLong(USER_ID_COLUMN))
+                    .balance(rs.getBigDecimal(BALANCE_COLUMN))
+                    .build();
 
     @Override
-    public Optional<Account> findByUserId(Long userId) {
+    public Optional<Account> findByUserId(final Long userId) {
+        final String sql = String.format("SELECT %s, %s, %s FROM %s WHERE %s = ?",
+                ID_COLUMN, USER_ID_COLUMN, BALANCE_COLUMN, ACCOUNT_TABLE, USER_ID_COLUMN);
+
         try {
-            String sql = "SELECT * FROM account WHERE user_id = ?";
-            Account account = jdbcTemplate.queryForObject(sql, accountRowMapper, userId);
+            Account account = jdbcTemplate.queryForObject(sql, ACCOUNT_ROW_MAPPER, userId);
             return Optional.ofNullable(account);
         } catch (EmptyResultDataAccessException e) {
+            log.debug("Account not found for userId={}", userId);
             return Optional.empty();
-        } catch (Exception e) {
-            logger.error("Error findByUserId={}", userId, e);
-            throw new CustomException("Error retrieving account for userId: " + userId);
+        } catch (DataAccessException e) {
+            log.error("Error finding account for userId={}", userId, e);
+            throw new CustomException("Error retrieving account", e);
         }
     }
 
     @Override
-    public boolean updateBalance(Long userId, BigDecimal newBalance) {
+    @Transactional
+    public boolean updateBalance(final Long userId, final BigDecimal newBalance) {
+        final String sql = String.format("UPDATE %s SET %s = ? WHERE %s = ?",
+                ACCOUNT_TABLE, BALANCE_COLUMN, USER_ID_COLUMN);
         try {
-            String sql = "UPDATE account SET balance = ? WHERE user_id = ?";
-            int updated = jdbcTemplate.update(sql, newBalance, userId);
-            return updated == 1;
-        } catch (Exception e) {
-            logger.error("Error updateBalance userId={}, newBalance={}", userId, newBalance, e);
-            throw new CustomException("Error updating balance for userId: " + userId);
+            int rowsAffected = jdbcTemplate.update(sql, newBalance, userId);
+            return rowsAffected == AFFECTED_ROWS_ONE;
+        } catch (DataAccessException e) {
+            log.error("Error updating balance for userId={}, balance={}", userId, newBalance, e);
+            throw new CustomException("Error updating account balance", e);
         }
     }
 }

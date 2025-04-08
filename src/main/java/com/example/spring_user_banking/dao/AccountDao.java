@@ -1,6 +1,5 @@
 package com.example.spring_user_banking.dao;
 
-
 import com.example.spring_user_banking.model.Account;
 
 import java.math.BigDecimal;

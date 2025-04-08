@@ -4,59 +4,72 @@ import com.example.spring_user_banking.dao.EmailDataDao;
 import com.example.spring_user_banking.exception.CustomException;
 import com.example.spring_user_banking.model.EmailData;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.example.spring_user_banking.config.database.DatabaseConstants.*;
+
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class EmailDataDaoPostgresImpl implements EmailDataDao {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private final RowMapper<EmailData> rowMapper = (rs, rowNum) -> {
-        EmailData e = new EmailData();
-        e.setId(rs.getLong("id"));
-        e.setUserId(rs.getLong("user_id"));
-        e.setEmail(rs.getString("email"));
-        return e;
-    };
+    private static final RowMapper<EmailData> EMAIL_ROW_MAPPER = (rs, rowNum) ->
+            EmailData.builder()
+                    .id(rs.getLong(ID_COLUMN))
+                    .userId(rs.getLong(USER_ID_COLUMN))
+                    .email(rs.getString(EMAIL_COLUMN))
+                    .build();
 
     @Override
-    public List<EmailData> findByUserId(Long userId) {
+    public List<EmailData> findByUserId(final Long userId) {
+        final String sql = String.format("SELECT %s, %s, %s FROM %s WHERE %s = ?",
+                ID_COLUMN, USER_ID_COLUMN, EMAIL_COLUMN, EMAIL_DATA_TABLE, USER_ID_COLUMN);
         try {
-            String sql = "SELECT * FROM email_data WHERE user_id = ?";
-            return jdbcTemplate.query(sql, rowMapper, userId);
-        } catch (EmptyResultDataAccessException e) {
-            return List.of();
-        } catch (Exception e) {
-            throw new CustomException("Error retrieving email data for userId: " + userId);
+            return jdbcTemplate.query(sql, EMAIL_ROW_MAPPER, userId);
+        } catch (DataAccessException e) {
+            log.error("Error retrieving emails for userId={}", userId, e);
+            throw new CustomException("Error retrieving emails", e);
         }
     }
 
     @Override
-    public boolean save(EmailData emailData) {
+    @Transactional
+    public boolean save(final EmailData emailData) {
+        final String sql = String.format("INSERT INTO %s (%s, %s) VALUES (?, ?)",
+                EMAIL_DATA_TABLE, USER_ID_COLUMN, EMAIL_COLUMN);
         try {
-            String sql = "INSERT INTO email_data (user_id, email) VALUES (?, ?)";
-            return jdbcTemplate.update(sql, emailData.getUserId(), emailData.getEmail()) == 1;
+            int rowsAffected = jdbcTemplate.update(sql, emailData.getUserId(), emailData.getEmail());
+            return rowsAffected == AFFECTED_ROWS_ONE;
         } catch (DuplicateKeyException e) {
-            throw new CustomException("Email already exists: " + emailData.getEmail());
-        } catch (Exception e) {
-            throw new CustomException("Error saving email data for userId: " + emailData.getUserId());
+            log.warn("Duplicate email={} for userId={}", emailData.getEmail(), emailData.getUserId());
+            throw new CustomException("Email already exists", e);
+        } catch (DataAccessException e) {
+            log.error("Error saving email={} for userId={}", emailData.getEmail(), emailData.getUserId(), e);
+            throw new CustomException("Error saving email", e);
         }
     }
 
     @Override
-    public boolean deleteByUserIdAndEmail(Long userId, String email) {
+    @Transactional
+    public boolean deleteByUserIdAndEmail(final Long userId, final String email) {
+        final String sql = String.format("DELETE FROM %s WHERE %s = ? AND %s = ?",
+                EMAIL_DATA_TABLE, USER_ID_COLUMN, EMAIL_COLUMN);
         try {
-            String sql = "DELETE FROM email_data WHERE user_id = ? AND email = ?";
-            return jdbcTemplate.update(sql, userId, email) == 1;
-        } catch (Exception e) {
-            throw new CustomException("Error deleting email: " + email);
+            int rowsAffected = jdbcTemplate.update(sql, userId, email);
+            return rowsAffected == AFFECTED_ROWS_ONE;
+        } catch (DataAccessException e) {
+            log.error("Error deleting email={} for userId={}", email, userId, e);
+            throw new CustomException("Error deleting email", e);
         }
     }
 }

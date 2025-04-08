@@ -11,6 +11,7 @@ import java.util.List;
 @Setter
 @ToString(exclude = "passwordHash")
 @EqualsAndHashCode(exclude = "passwordHash")
+@AllArgsConstructor
 public class User {
     public static final int NAME_MAX_LENGTH = 500;
     public static final int PASSWORD_MIN_LENGTH = 8;

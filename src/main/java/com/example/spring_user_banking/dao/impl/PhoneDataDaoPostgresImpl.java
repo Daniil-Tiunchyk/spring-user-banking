@@ -4,59 +4,58 @@ import com.example.spring_user_banking.dao.PhoneDataDao;
 import com.example.spring_user_banking.exception.CustomException;
 import com.example.spring_user_banking.model.PhoneData;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.example.spring_user_banking.config.database.DatabaseConstants.*;
+
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class PhoneDataDaoPostgresImpl implements PhoneDataDao {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private final RowMapper<PhoneData> rowMapper = (rs, rowNum) -> {
-        PhoneData p = new PhoneData();
-        p.setId(rs.getLong("id"));
-        p.setUserId(rs.getLong("user_id"));
-        p.setPhone(rs.getString("phone"));
-        return p;
-    };
+    private static final RowMapper<PhoneData> PHONE_ROW_MAPPER = (rs, rowNum) ->
+            PhoneData.builder()
+                    .id(rs.getLong(ID_COLUMN))
+                    .userId(rs.getLong(USER_ID_COLUMN))
+                    .phone(rs.getString(PHONE_COLUMN))
+                    .build();
 
     @Override
-    public List<PhoneData> findByUserId(Long userId) {
+    public List<PhoneData> findByUserId(final Long userId) {
+        final String sql = String.format("SELECT %s, %s, %s FROM %s WHERE %s = ?",
+                ID_COLUMN, USER_ID_COLUMN, PHONE_COLUMN, PHONE_DATA_TABLE, USER_ID_COLUMN);
         try {
-            String sql = "SELECT * FROM phone_data WHERE user_id = ?";
-            return jdbcTemplate.query(sql, rowMapper, userId);
-        } catch (EmptyResultDataAccessException e) {
-            return List.of();
-        } catch (Exception e) {
-            throw new CustomException("Error retrieving phone data for userId: " + userId);
+            return jdbcTemplate.query(sql, PHONE_ROW_MAPPER, userId);
+        } catch (DataAccessException e) {
+            log.error("Error retrieving phones for userId={}", userId, e);
+            throw new CustomException("Error retrieving phones", e);
         }
     }
 
     @Override
-    public boolean save(PhoneData phoneData) {
+    @Transactional
+    public boolean save(final PhoneData phoneData) {
+        final String sql = String.format("INSERT INTO %s (%s, %s) VALUES (?, ?)",
+                PHONE_DATA_TABLE, USER_ID_COLUMN, PHONE_COLUMN);
         try {
-            String sql = "INSERT INTO phone_data (user_id, phone) VALUES (?, ?)";
-            return jdbcTemplate.update(sql, phoneData.getUserId(), phoneData.getPhone()) == 1;
+            int rowsAffected = jdbcTemplate.update(sql, phoneData.getUserId(), phoneData.getPhone());
+            return rowsAffected == AFFECTED_ROWS_ONE;
         } catch (DuplicateKeyException e) {
-            throw new CustomException("Phone already exists: " + phoneData.getPhone());
-        } catch (Exception e) {
-            throw new CustomException("Error saving phone data for userId: " + phoneData.getUserId());
-        }
-    }
-
-    @Override
-    public boolean deleteByUserIdAndPhone(Long userId, String phone) {
-        try {
-            String sql = "DELETE FROM phone_data WHERE user_id = ? AND phone = ?";
-            return jdbcTemplate.update(sql, userId, phone) == 1;
-        } catch (Exception e) {
-            throw new CustomException("Error deleting phone: " + phone);
+            log.warn("Duplicate phone={} for userId={}", phoneData.getPhone(), phoneData.getUserId());
+            throw new CustomException("Phone already exists", e);
+        } catch (DataAccessException e) {
+            log.error("Error saving phone={} for userId={}", phoneData.getPhone(), phoneData.getUserId(), e);
+            throw new CustomException("Error saving phone", e);
         }
     }
 }
