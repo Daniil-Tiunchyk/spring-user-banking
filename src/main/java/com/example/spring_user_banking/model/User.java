@@ -9,8 +9,8 @@ import java.util.List;
 
 @Getter
 @Setter
-@ToString(exclude = "passwordHash")
-@EqualsAndHashCode(exclude = "passwordHash")
+@ToString(exclude = "password")
+@EqualsAndHashCode(exclude = "password")
 @AllArgsConstructor
 public class User {
     public static final int NAME_MAX_LENGTH = 500;
@@ -20,7 +20,7 @@ public class User {
     private Long id;
     private String name;
     private LocalDate dateOfBirth;
-    private String passwordHash;
+    private String password;
 
     private List<String> emails = new ArrayList<>();
     private List<String> phones = new ArrayList<>();

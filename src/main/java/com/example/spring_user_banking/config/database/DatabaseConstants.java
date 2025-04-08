@@ -16,7 +16,7 @@ public class DatabaseConstants {
     public static final String USER_ID_COLUMN = "user_id";
     public static final String NAME_COLUMN = "name";
     public static final String DATE_OF_BIRTH_COLUMN = "date_of_birth";
-    public static final String PASSWORD_HASH_COLUMN = "password_hash";
+    public static final String PASSWORD_COLUMN = "password";
     public static final String EMAIL_COLUMN = "email";
     public static final String PHONE_COLUMN = "phone";
     public static final String BALANCE_COLUMN = "balance";

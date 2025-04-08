@@ -35,7 +35,7 @@ public class UserDaoPostgresImpl implements UserDao {
                     rs.getLong(ID_COLUMN),
                     rs.getString(NAME_COLUMN),
                     rs.getObject(DATE_OF_BIRTH_COLUMN, LocalDate.class),
-                    rs.getString(PASSWORD_HASH_COLUMN),
+                    rs.getString(PASSWORD_COLUMN),
                     new ArrayList<>(),
                     new ArrayList<>(),
                     BigDecimal.ZERO
@@ -43,21 +43,21 @@ public class UserDaoPostgresImpl implements UserDao {
 
     @Override
     public Optional<User> findById(final Long id) {
-        final String sql = "SELECT id, name, date_of_birth, password_hash FROM users WHERE id = ?";
+        final String sql = "SELECT id, name, date_of_birth, password FROM users WHERE id = ?";
         return querySingleUser(sql, id);
     }
 
     @Override
     public List<User> findAll(final int offset, final int limit) {
-        final String sql = "SELECT id, name, date_of_birth, password_hash FROM users OFFSET ? LIMIT ?";
+        final String sql = "SELECT id, name, date_of_birth, password FROM users OFFSET ? LIMIT ?";
         return queryUsers(sql, offset, limit);
     }
 
     @Override
     @Transactional
     public boolean update(final User user) {
-        final String sql = "UPDATE users SET name = ?, date_of_birth = ?, password_hash = ? WHERE id = ?";
-        return executeUpdate(sql, user.getName(), user.getDateOfBirth(), user.getPasswordHash(), user.getId());
+        final String sql = "UPDATE users SET name = ?, date_of_birth = ?, password = ? WHERE id = ?";
+        return executeUpdate(sql, user.getName(), user.getDateOfBirth(), user.getPassword(), user.getId());
     }
 
     @Override
@@ -86,19 +86,19 @@ public class UserDaoPostgresImpl implements UserDao {
 
     @Override
     public List<User> findByNameStartingWith(final String namePrefix, final int offset, final int limit) {
-        final String sql = "SELECT id, name, date_of_birth, password_hash FROM users WHERE name LIKE ? OFFSET ? LIMIT ?";
+        final String sql = "SELECT id, name, date_of_birth, password FROM users WHERE name LIKE ? OFFSET ? LIMIT ?";
         return queryUsers(sql, namePrefix + "%", offset, limit);
     }
 
     @Override
     public List<User> findByBirthDateAfter(final LocalDate date, final int offset, final int limit) {
-        final String sql = "SELECT id, name, date_of_birth, password_hash FROM users WHERE date_of_birth > ? OFFSET ? LIMIT ?";
+        final String sql = "SELECT id, name, date_of_birth, password FROM users WHERE date_of_birth > ? OFFSET ? LIMIT ?";
         return queryUsers(sql, date, offset, limit);
     }
 
     @Override
     public Optional<User> findByEmail(final String email) {
-        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password_hash " +
+        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password" +
                 "FROM users u JOIN email_data e ON u.id = e.user_id " +
                 "WHERE e.email = ?";
         return querySingleUser(sql, email);
@@ -106,7 +106,7 @@ public class UserDaoPostgresImpl implements UserDao {
 
     @Override
     public Optional<User> findByPhone(final String phone) {
-        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password_hash " +
+        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password " +
                 "FROM users u JOIN phone_data p ON u.id = p.user_id " +
                 "WHERE p.phone = ?";
         return querySingleUser(sql, phone);
@@ -114,7 +114,7 @@ public class UserDaoPostgresImpl implements UserDao {
 
     @Override
     public Optional<User> findByEmailOrPhone(final String login) {
-        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password_hash FROM users u " +
+        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password FROM users u " +
                 "LEFT JOIN email_data e ON u.id = e.user_id " +
                 "LEFT JOIN phone_data p ON u.id = p.user_id " +
                 "WHERE e.email = ? OR p.phone = ? LIMIT 1";
