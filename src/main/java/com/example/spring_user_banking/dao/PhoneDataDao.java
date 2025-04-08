@@ -8,4 +8,6 @@ public interface PhoneDataDao {
     List<PhoneData> findByUserId(Long userId);
 
     boolean save(PhoneData phoneData);
+
+    boolean deleteByUserIdAndPhone(Long userId, String phone);
 }

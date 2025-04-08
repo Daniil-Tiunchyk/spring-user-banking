@@ -1,6 +1,7 @@
 package com.example.spring_user_banking.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -24,5 +25,11 @@ public class GlobalExceptionHandler {
         resp.put("error", e.getMessage());
         resp.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         return resp;
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Object> handleUnauthorizedException(UnauthorizedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", ex.getMessage(), "status", HttpStatus.UNAUTHORIZED.value()));
     }
 }

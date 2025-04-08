@@ -1,6 +1,5 @@
 package com.example.spring_user_banking.security;
 
-import com.example.spring_user_banking.config.JwtTokenProvider;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -36,10 +35,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        String token = request.getHeader("Authorization");
+        if (token == null) return null;
+        if (token.startsWith("Bearer ")) {
+            return token.substring(7);
         }
-        return null;
+        return token;
     }
 }
