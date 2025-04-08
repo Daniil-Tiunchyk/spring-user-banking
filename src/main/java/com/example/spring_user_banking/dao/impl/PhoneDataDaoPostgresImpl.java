@@ -58,4 +58,18 @@ public class PhoneDataDaoPostgresImpl implements PhoneDataDao {
             throw new CustomException("Error saving phone", e);
         }
     }
+
+    @Override
+    @Transactional
+    public boolean deleteByUserIdAndPhone(final Long userId, final String phone) {
+        final String sql = String.format("DELETE FROM %s WHERE %s = ? AND %s = ?",
+                PHONE_DATA_TABLE, USER_ID_COLUMN, PHONE_COLUMN);
+        try {
+            int rowsAffected = jdbcTemplate.update(sql, userId, phone);
+            return rowsAffected == AFFECTED_ROWS_ONE;
+        } catch (DataAccessException e) {
+            log.error("Error deleting phone={} for userId={}", phone, userId, e);
+            throw new CustomException("Error deleting phone", e);
+        }
+    }
 }
