@@ -2,12 +2,14 @@ package com.example.spring_user_banking.dao.impl;
 
 import com.example.spring_user_banking.dao.UserDao;
 import com.example.spring_user_banking.exception.DuplicateDataException;
+
 import com.example.spring_user_banking.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
@@ -132,6 +134,60 @@ public class UserDaoPostgresImpl implements UserDao {
         List<User> users = jdbcTemplate.query(sql, USER_ROW_MAPPER, args);
         users.forEach(this::loadUserDetails);
         return users;
+      
+    private static final String FIND_BY_EMAIL_OR_PHONE_SQL =
+            "SELECT u.* FROM users u " +
+                    "LEFT JOIN email_data e ON u.id = e.user_id " +
+                    "LEFT JOIN phone_data p ON u.id = p.user_id " +
+                    "WHERE e.email = ? OR p.phone = ?";
+
+    @Override
+    public Optional<User> findByEmailOrPhone(String login) {
+        try {
+            User user = jdbcTemplate.queryForObject(
+                    FIND_BY_EMAIL_OR_PHONE_SQL,
+                    (rs, rowNum) -> {
+                        User u = new User();
+                        u.setId(rs.getLong("id"));
+                        u.setName(rs.getString("name"));
+                        u.setDateOfBirth(rs.getDate("date_of_birth").toLocalDate());
+                        // password_hash и другие поля по необходимости
+                        return u;
+                    },
+                    login, login // передаем login два раза для email и phone
+            );
+            return Optional.ofNullable(user);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    private void loadUserDetailsWithSeparateQueries(User user) {
+        Long userId = user.getId();
+        try {
+
+            String emailSql = String.format("SELECT %s FROM %s WHERE %s = ?",
+                    EMAIL_COLUMN, EMAIL_DATA_TABLE, USER_ID_COLUMN);
+            List<String> emails = jdbcTemplate.query(emailSql,
+                    (rs, rowNum) -> rs.getString(EMAIL_COLUMN), userId);
+            user.setEmails(emails);
+
+            String phoneSql = String.format("SELECT %s FROM %s WHERE %s = ?",
+                    PHONE_COLUMN, PHONE_DATA_TABLE, USER_ID_COLUMN);
+            List<String> phones = jdbcTemplate.query(phoneSql,
+                    (rs, rowNum) -> rs.getString(PHONE_COLUMN), userId);
+            user.setPhones(phones);
+
+            String balanceSql = String.format("SELECT %s FROM %s WHERE %s = ?",
+                    BALANCE_COLUMN, ACCOUNT_TABLE, USER_ID_COLUMN);
+            BigDecimal balance = jdbcTemplate.queryForObject(balanceSql,
+                    (rs, rowNum) -> rs.getBigDecimal(BALANCE_COLUMN), userId);
+            user.setBalance(balance);
+
+        } catch (DataAccessException e) {
+            logger.error("Failed to load details for user ID: {}", userId, e);
+            throw new DataAccessException("Error loading user details for ID: " + userId, e) {};
+        }
     }
 
     private void loadUserDetails(final User user) {
