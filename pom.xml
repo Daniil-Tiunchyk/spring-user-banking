@@ -23,6 +23,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.2.13</logback.version>
         <lombok.version>1.18.38</lombok.version>
+        <postgresql.version>42.7.5</postgresql.version>
     </properties>
 
     <dependencies>
@@ -47,6 +48,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+            <version>${postgresql.version}</version>
         </dependency>
 
         <!-- Зависимость SLF4J -->
@@ -104,13 +112,7 @@
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.6.0</version>
-        </dependency>
-
+  
     </dependencies>
 
     <build>
