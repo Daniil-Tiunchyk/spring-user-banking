@@ -37,7 +37,13 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
-                .antMatchers("/api/auth/**").permitAll()
+                .antMatchers(
+                        "/api/auth/**",
+                        "/swagger-ui.html",      // основной интерфейс Swagger UI
+                        "/v2/api-docs",          // спецификация API для Springfox Swagger 2.x
+                        "/swagger-resources/**", // ресурсы Swagger, включая описания для UI
+                        "/configuration/**"     // дополнительные настройки (для Springfox)
+                ).permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(
