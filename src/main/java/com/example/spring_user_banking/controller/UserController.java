@@ -6,8 +6,11 @@ import com.example.spring_user_banking.dto.UserDTO;
 import com.example.spring_user_banking.mapper.UserMapper;
 import com.example.spring_user_banking.model.User;
 import com.example.spring_user_banking.service.UserService;
-import io.swagger.annotations.*;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -22,6 +25,16 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserService userService;
+
+    /**
+     * Получение идентификатора текущего пользователя из SecurityContextHolder.
+     */
+    private Long getCurrentUserId() {
+        return (Long) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+    }
 
     @ApiOperation(value = "Получить пользователя по ID")
     @GetMapping("/{userId}")
@@ -80,41 +93,40 @@ public class UserController {
             @ApiParam(value = "DTO с email")
             @RequestBody EmailDTO emailDTO
     ) {
-        // TODO Заменить currentUserId на id User из JWT
-        Long currentUserId = userId;
+        Long currentUserId = getCurrentUserId();
         userService.addEmail(currentUserId, userId, emailDTO.getEmail());
     }
 
     @ApiOperation(value = "Удалить e-mail у пользователя (только у себя)")
     @DeleteMapping("/{userId}/emails")
     public void removeEmail(
+            @ApiParam(value = "ID пользователя (должен совпадать с авторизованным)", required = true)
             @PathVariable Long userId,
             @RequestBody EmailDTO emailDTO
     ) {
-        // TODO Заменить currentUserId на id User из JWT
-        Long currentUserId = userId;
+        Long currentUserId = getCurrentUserId();
         userService.removeEmail(currentUserId, userId, emailDTO.getEmail());
     }
 
     @ApiOperation(value = "Добавить телефон пользователю (только себе)")
     @PostMapping("/{userId}/phones")
     public void addPhone(
+            @ApiParam(value = "ID пользователя (должен совпадать с авторизованным)", required = true)
             @PathVariable Long userId,
             @RequestBody PhoneDTO phoneDTO
     ) {
-        // TODO Заменить currentUserId на id User из JWT
-        Long currentUserId = userId;
+        Long currentUserId = getCurrentUserId();
         userService.addPhone(currentUserId, userId, phoneDTO.getPhone());
     }
 
     @ApiOperation(value = "Удалить телефон у пользователя (только у себя)")
     @DeleteMapping("/{userId}/phones")
     public void removePhone(
+            @ApiParam(value = "ID пользователя (должен совпадать с авторизованным)", required = true)
             @PathVariable Long userId,
             @RequestBody PhoneDTO phoneDTO
     ) {
-        // TODO Заменить currentUserId на id User из JWT
-        Long currentUserId = userId;
+        Long currentUserId = getCurrentUserId();
         userService.removePhone(currentUserId, userId, phoneDTO.getPhone());
     }
 }

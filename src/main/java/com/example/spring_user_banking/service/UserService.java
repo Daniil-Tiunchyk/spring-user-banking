@@ -41,7 +41,7 @@ public class UserService {
             return userDao.findAll(offset, limit);
         }
 
-        //TODO Вынести логику в единый SQL-запрос
+        // TODO Оптимизировать, вынеся логику в единый SQL-запрос
         Set<User> result = new HashSet<>(userDao.findAll(0, 10_000));
 
         if (namePrefix != null && !namePrefix.isEmpty()) {
@@ -77,11 +77,18 @@ public class UserService {
         return filteredList.subList(fromIndex, toIndex);
     }
 
+    /**
+     * Проверка, что текущий пользователь имеет право изменять данные указанного пользователя.
+     */
+    private void checkUserAuthorization(Long currentUserId, Long targetUserId) {
+        if (!Objects.equals(currentUserId, targetUserId)) {
+            throw new SecurityException("Нельзя изменять данные другого пользователя!");
+        }
+    }
+
     @Transactional
     public void addEmail(Long currentUserId, Long targetUserId, String email) {
-        if (!Objects.equals(currentUserId, targetUserId)) {
-            throw new SecurityException("Нельзя добавлять e-mail другому пользователю!");
-        }
+        checkUserAuthorization(currentUserId, targetUserId);
         var existingUser = userDao.findByEmail(email);
         if (existingUser.isPresent() && !existingUser.get().getId().equals(targetUserId)) {
             throw new IllegalArgumentException("Email уже занят другим пользователем!");
@@ -98,9 +105,7 @@ public class UserService {
 
     @Transactional
     public void removeEmail(Long currentUserId, Long targetUserId, String email) {
-        if (!Objects.equals(currentUserId, targetUserId)) {
-            throw new SecurityException("Нельзя удалять e-mail у другого пользователя!");
-        }
+        checkUserAuthorization(currentUserId, targetUserId);
         var allEmails = emailDataDao.findByUserId(targetUserId);
         if (allEmails.size() <= 1 && allEmails.stream().anyMatch(e -> e.getEmail().equals(email))) {
             throw new IllegalArgumentException("У пользователя должен остаться хотя бы один email!");
@@ -113,9 +118,7 @@ public class UserService {
 
     @Transactional
     public void addPhone(Long currentUserId, Long targetUserId, String phone) {
-        if (!Objects.equals(currentUserId, targetUserId)) {
-            throw new SecurityException("Нельзя добавлять телефон другому пользователю!");
-        }
+        checkUserAuthorization(currentUserId, targetUserId);
         var existingUser = userDao.findByPhone(phone);
         if (existingUser.isPresent() && !existingUser.get().getId().equals(targetUserId)) {
             throw new IllegalArgumentException("Телефон уже занят другим пользователем!");
@@ -132,9 +135,7 @@ public class UserService {
 
     @Transactional
     public void removePhone(Long currentUserId, Long targetUserId, String phone) {
-        if (!Objects.equals(currentUserId, targetUserId)) {
-            throw new SecurityException("Нельзя удалять телефон у другого пользователя!");
-        }
+        checkUserAuthorization(currentUserId, targetUserId);
         var phones = phoneDataDao.findByUserId(targetUserId);
         if (phones.size() <= 1 && phones.stream().anyMatch(p -> p.getPhone().equals(phone))) {
             throw new IllegalArgumentException("У пользователя должен остаться хотя бы один телефон!");

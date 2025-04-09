@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-
 @Api(tags = "Account API")
 @RestController
 @RequestMapping("/accounts")
@@ -23,13 +22,24 @@ public class AccountController {
     private final TransferService transferService;
     private final UserService userService;
 
+    /**
+     * Получение идентификатора текущего пользователя из SecurityContextHolder.
+     */
+    private Long getCurrentUserId() {
+        return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
     @ApiOperation("Получить информацию о текущем пользователе (с балансом)")
     @GetMapping
     public UserDTO getMyAccount(
-            @ApiParam(value = "Авторизованный userId")
-            @RequestParam Long currentUserId
+            @ApiParam(value = "Авторизованный userId") @RequestParam Long currentUserId
     ) {
-        User user = userService.getUserById(currentUserId)
+        Long authenticatedUserId = getCurrentUserId();
+        // Проверка: запрашиваемый userId должен соответствовать авторизованному пользователю.
+        if (!currentUserId.equals(authenticatedUserId)) {
+            throw new SecurityException("Нельзя запрашивать данные другого пользователя!");
+        }
+        User user = userService.getUserById(authenticatedUserId)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
         return UserMapper.toUserDTO(user);
     }
@@ -37,11 +47,7 @@ public class AccountController {
     @ApiOperation("Перевести деньги другому пользователю")
     @PostMapping("/transfer")
     public void transferMoney(@RequestBody TransferRequestDTO dto) {
-        Long fromUserId = (Long) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
-
+        Long fromUserId = getCurrentUserId();
         transferService.transferMoney(fromUserId, dto.getToUserId(), dto.getAmount());
     }
 }
