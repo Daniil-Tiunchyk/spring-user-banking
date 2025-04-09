@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static com.example.spring_user_banking.config.database.DatabaseConstants.*;
@@ -63,6 +64,21 @@ public class AccountDaoPostgresImpl implements AccountDao {
         } catch (DataAccessException e) {
             log.error("Ошибка поиска счета для userId={} при использовании FOR UPDATE", userId, e);
             throw new CustomException("Ошибка получения счета с FOR UPDATE", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public List<Account> findAllForUpdate() {
+        final String sql = String.format(
+                "SELECT %s, %s, %s FROM %s FOR UPDATE",
+                ID_COLUMN, USER_ID_COLUMN, BALANCE_COLUMN, ACCOUNT_TABLE
+        );
+        try {
+            return jdbcTemplate.query(sql, ACCOUNT_ROW_MAPPER);
+        } catch (DataAccessException e) {
+            log.error("Ошибка поиска счетов с FOR UPDATE", e);
+            throw new CustomException("Ошибка при получении счетов (FOR UPDATE)", e);
         }
     }
 
