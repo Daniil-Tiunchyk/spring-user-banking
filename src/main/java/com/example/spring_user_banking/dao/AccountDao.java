@@ -8,5 +8,11 @@ import java.util.Optional;
 public interface AccountDao {
     Optional<Account> findByUserId(Long userId);
 
+    /**
+     * Пункт №4. Находим Account по userId, используя SELECT ... FOR UPDATE,
+     * чтобы заблокировать строку в БД на время транзакции.
+     */
+    Optional<Account> findByUserIdForUpdate(Long userId);
+
     boolean updateBalance(Long userId, BigDecimal newBalance);
 }
