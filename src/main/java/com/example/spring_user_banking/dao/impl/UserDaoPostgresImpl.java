@@ -64,7 +64,7 @@ public class UserDaoPostgresImpl implements UserDao {
 
     @Override
     public Optional<User> findByEmail(final String email) {
-        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password" +
+        final String sql = "SELECT u.id, u.name, u.date_of_birth, u.password " +
                 "FROM users u JOIN email_data e ON u.id = e.user_id " +
                 "WHERE e.email = ?";
         return querySingleUser(sql, email);
