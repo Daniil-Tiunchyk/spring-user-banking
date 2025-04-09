@@ -40,6 +40,12 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
+        <!-- Стартер для работы с Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- Стартер Spring Security для обеспечения безопасности приложения -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

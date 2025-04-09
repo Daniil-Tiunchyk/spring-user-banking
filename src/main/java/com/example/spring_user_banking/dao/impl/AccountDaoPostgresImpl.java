@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static com.example.spring_user_banking.config.database.DatabaseConstants.*;
@@ -40,11 +41,44 @@ public class AccountDaoPostgresImpl implements AccountDao {
             Account account = jdbcTemplate.queryForObject(sql, ACCOUNT_ROW_MAPPER, userId);
             return Optional.ofNullable(account);
         } catch (EmptyResultDataAccessException e) {
-            log.debug("Account not found for userId={}", userId);
+            log.debug("Счет не найден для userId={}", userId);
             return Optional.empty();
         } catch (DataAccessException e) {
-            log.error("Error finding account for userId={}", userId, e);
-            throw new CustomException("Error retrieving account", e);
+            log.error("Ошибка поиска счета для userId={}", userId, e);
+            throw new CustomException("Ошибка получения счета", e);
+        }
+    }
+
+    @Override
+    public Optional<Account> findByUserIdForUpdate(final Long userId) {
+        final String sql = String.format(
+                "SELECT %s, %s, %s FROM %s WHERE %s = ? FOR UPDATE",
+                ID_COLUMN, USER_ID_COLUMN, BALANCE_COLUMN, ACCOUNT_TABLE, USER_ID_COLUMN
+        );
+        try {
+            Account acc = jdbcTemplate.queryForObject(sql, ACCOUNT_ROW_MAPPER, userId);
+            return Optional.ofNullable(acc);
+        } catch (EmptyResultDataAccessException e) {
+            log.debug("Счет не найден для userId={} при использовании FOR UPDATE", userId);
+            return Optional.empty();
+        } catch (DataAccessException e) {
+            log.error("Ошибка поиска счета для userId={} при использовании FOR UPDATE", userId, e);
+            throw new CustomException("Ошибка получения счета с FOR UPDATE", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public List<Account> findAllForUpdate() {
+        final String sql = String.format(
+                "SELECT %s, %s, %s FROM %s FOR UPDATE",
+                ID_COLUMN, USER_ID_COLUMN, BALANCE_COLUMN, ACCOUNT_TABLE
+        );
+        try {
+            return jdbcTemplate.query(sql, ACCOUNT_ROW_MAPPER);
+        } catch (DataAccessException e) {
+            log.error("Ошибка поиска счетов с FOR UPDATE", e);
+            throw new CustomException("Ошибка при получении счетов (FOR UPDATE)", e);
         }
     }
 
@@ -57,8 +91,8 @@ public class AccountDaoPostgresImpl implements AccountDao {
             int rowsAffected = jdbcTemplate.update(sql, newBalance, userId);
             return rowsAffected == AFFECTED_ROWS_ONE;
         } catch (DataAccessException e) {
-            log.error("Error updating balance for userId={}, balance={}", userId, newBalance, e);
-            throw new CustomException("Error updating account balance", e);
+            log.error("Ошибка обновления баланса для userId={}, баланс={}", userId, newBalance, e);
+            throw new CustomException("Ошибка обновления баланса", e);
         }
     }
 }

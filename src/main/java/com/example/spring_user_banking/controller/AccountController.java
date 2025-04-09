@@ -11,6 +11,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -38,12 +39,12 @@ public class AccountController {
 
     @ApiOperation("Перевести деньги другому пользователю")
     @PostMapping("/transfer")
-    public void transferMoney(
-            @ApiParam(value = "Авторизованный userId (отправитель)")
-            @RequestParam Long fromUserId,
+    public void transferMoney(@RequestBody TransferRequestDTO dto) {
+        Long fromUserId = (Long) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
 
-            @RequestBody TransferRequestDTO dto
-    ) {
         transferService.transferMoney(fromUserId, dto.getToUserId(), dto.getAmount());
     }
 
