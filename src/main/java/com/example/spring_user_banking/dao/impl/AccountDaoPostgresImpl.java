@@ -33,23 +33,6 @@ public class AccountDaoPostgresImpl implements AccountDao {
                     .build();
 
     @Override
-    public Optional<Account> findByUserId(final Long userId) {
-        final String sql = String.format("SELECT %s, %s, %s FROM %s WHERE %s = ?",
-                ID_COLUMN, USER_ID_COLUMN, BALANCE_COLUMN, ACCOUNT_TABLE, USER_ID_COLUMN);
-
-        try {
-            Account account = jdbcTemplate.queryForObject(sql, ACCOUNT_ROW_MAPPER, userId);
-            return Optional.ofNullable(account);
-        } catch (EmptyResultDataAccessException e) {
-            log.debug("Счет не найден для userId={}", userId);
-            return Optional.empty();
-        } catch (DataAccessException e) {
-            log.error("Ошибка поиска счета для userId={}", userId, e);
-            throw new CustomException("Ошибка получения счета", e);
-        }
-    }
-
-    @Override
     public Optional<Account> findByUserIdForUpdate(final Long userId) {
         final String sql = String.format(
                 "SELECT %s, %s, %s FROM %s WHERE %s = ? FOR UPDATE",

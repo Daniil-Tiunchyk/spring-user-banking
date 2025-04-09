@@ -27,5 +27,4 @@ public class DatabaseConstants {
 
     // Общие константы
     public static final int AFFECTED_ROWS_ONE = 1;
-    public static final String DATE_FORMAT = "dd.MM.yyyy";
 }

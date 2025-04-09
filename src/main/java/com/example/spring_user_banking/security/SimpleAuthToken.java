@@ -13,11 +13,37 @@ public class SimpleAuthToken implements Authentication {
         this.userId = userId;
     }
 
-    @Override public Long getPrincipal() { return userId; }
-    @Override public boolean isAuthenticated() { return true; }
-    @Override public void setAuthenticated(boolean isAuthenticated) {}
-    @Override public String getName() { return userId.toString(); }
-    @Override public Object getCredentials() { return null; }
-    @Override public Object getDetails() { return null; }
-    @Override public Collection<? extends GrantedAuthority> getAuthorities() { return Collections.emptyList(); }
+    @Override
+    public Long getPrincipal() {
+        return userId;
+    }
+
+    @Override
+    public boolean isAuthenticated() {
+        return true;
+    }
+
+    @Override
+    public void setAuthenticated(boolean isAuthenticated) {
+    }
+
+    @Override
+    public String getName() {
+        return userId.toString();
+    }
+
+    @Override
+    public Object getCredentials() {
+        return null;
+    }
+
+    @Override
+    public Object getDetails() {
+        return null;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.emptyList();
+    }
 }

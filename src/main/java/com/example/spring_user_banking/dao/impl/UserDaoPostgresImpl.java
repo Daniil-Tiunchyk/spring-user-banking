@@ -1,18 +1,15 @@
 package com.example.spring_user_banking.dao.impl;
 
 import com.example.spring_user_banking.dao.UserDao;
-import com.example.spring_user_banking.exception.DuplicateDataException;
 import com.example.spring_user_banking.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -51,37 +48,6 @@ public class UserDaoPostgresImpl implements UserDao {
     public List<User> findAll(final int offset, final int limit) {
         final String sql = "SELECT id, name, date_of_birth, password FROM users OFFSET ? LIMIT ?";
         return queryUsers(sql, offset, limit);
-    }
-
-    @Override
-    @Transactional
-    public boolean update(final User user) {
-        final String sql = "UPDATE users SET name = ?, date_of_birth = ?, password = ? WHERE id = ?";
-        return executeUpdate(sql, user.getName(), user.getDateOfBirth(), user.getPassword(), user.getId());
-    }
-
-    @Override
-    public boolean addEmail(final Long userId, final String email) {
-        final String sql = "INSERT INTO email_data (user_id, email) VALUES (?, ?)";
-        return executeInsert(sql, userId, email);
-    }
-
-    @Override
-    public boolean removeEmail(final Long userId, final String email) {
-        final String sql = "DELETE FROM email_data WHERE user_id = ? AND email = ?";
-        return executeUpdate(sql, userId, email);
-    }
-
-    @Override
-    public boolean addPhone(final Long userId, final String phone) {
-        final String sql = "INSERT INTO phone_data (user_id, phone) VALUES (?, ?)";
-        return executeInsert(sql, userId, phone);
-    }
-
-    @Override
-    public boolean removePhone(final Long userId, final String phone) {
-        final String sql = "DELETE FROM phone_data WHERE user_id = ? AND phone = ?";
-        return executeUpdate(sql, userId, phone);
     }
 
     @Override
@@ -162,17 +128,5 @@ public class UserDaoPostgresImpl implements UserDao {
                 user.getId()
         );
         user.setBalance(balance);
-    }
-
-    private boolean executeUpdate(final String sql, final Object... args) {
-        return jdbcTemplate.update(sql, args) == AFFECTED_ROWS_ONE;
-    }
-
-    private boolean executeInsert(final String sql, final Object... args) {
-        try {
-            return executeUpdate(sql, args);
-        } catch (DuplicateKeyException e) {
-            throw new DuplicateDataException("Duplicate entry: " + Arrays.toString(args), e);
-        }
     }
 }
