@@ -1,19 +1,35 @@
 services:
   app:
     build: .
+    container_name: spring-user-banking-app
     ports:
       - "8080:8080"
     depends_on:
       - postgres
       - redis
     environment:
+      # Настройки PostgreSQL (используются Spring Boot)
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mydb
       SPRING_DATASOURCE_USERNAME: myuser
       SPRING_DATASOURCE_PASSWORD: mypassword
+
+      # Настройки Flyway: указываем схему по умолчанию и разрешаем её создание
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_SCHEMAS: public
+      SPRING_FLYWAY_DEFAULT_SCHEMA: public
+      SPRING_FLYWAY_CREATE_SCHEMAS: "true"
+
+      # Настройки Redis
       SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+
+      # JWT (пример, если надо передавать секреты из окружения)
+      JWT_SECRET: "your-256-bit-secret-change-this-to-something-secure"
+      JWT_EXPIRATION: 86400000
 
   postgres:
     image: postgres:13-alpine
+    container_name: spring-user-banking-postgres
     environment:
       POSTGRES_DB: mydb
       POSTGRES_USER: myuser
@@ -25,6 +41,7 @@ services:
 
   redis:
     image: redis:6-alpine
+    container_name: spring-user-banking-redis
     ports:
       - "6379:6379"
 

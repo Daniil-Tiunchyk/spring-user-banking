@@ -25,6 +25,7 @@
         <lombok.version>1.18.38</lombok.version>
         <postgresql.version>42.7.5</postgresql.version>
         <jjwt.version>0.11.5</jjwt.version>
+        <flyway.version>9.16.3</flyway.version>
     </properties>
 
     <dependencies>
@@ -116,6 +117,13 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Flyway для миграции базы данных -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
         </dependency>
 
     </dependencies>
